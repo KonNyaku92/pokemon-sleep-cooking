@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ポケモンスリープ 料理素材計算</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+  background: linear-gradient(135deg, #0f1b3d 0%, #1a2a5e 50%, #0d1a3a 100%);
+  color: #e0e8ff;
+  min-height: 100vh;
+  padding: 16px;
+}
+h1 {
+  text-align: center;
+  font-size: 1.3rem;
+  padding: 16px 0;
+  color: #ffd866;
+  text-shadow: 0 0 10px rgba(255,216,102,0.3);
+}
+.category-section {
+  background: rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.category-label {
+  font-size: 0.85rem;
+  color: #8899cc;
+  margin-bottom: 8px;
+}
+select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.12);
+  color: #e0e8ff;
+  font-size: 0.95rem;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238899cc' fill='none' stroke-width='2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer;
+}
+select:focus { outline: none; border-color: #ffd866; }
+select:disabled { opacity: 0.4; cursor: default; }
+select option { background: #1a2a5e; color: #e0e8ff; }
+.meals {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.meal-slot {
+  background: rgba(255,255,255,0.05);
+  border-radius: 10px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  cursor: pointer;
+  transition: border-color 0.2s;
+  position: relative;
+}
+.meal-slot.active { border-color: #ffd866; }
+.meal-header {
+  font-size: 0.85rem;
+  color: #8899cc;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.meal-header .num {
+  background: #ffd866;
+  color: #0f1b3d;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.8rem;
+}
+.meal-name {
+  font-size: 0.95rem;
+  color: #e0e8ff;
+  padding: 8px 0 2px;
+}
+.meal-name.empty { color: #556; }
+.selected-recipe {
+  font-size: 0.8rem;
+  color: #ffd866;
+  min-height: 1.2em;
+}
+.meal-link {
+  font-size: 0.75rem;
+  color: #6680bb;
+  text-align: right;
+  margin-top: 4px;
+}
+.result {
+  background: rgba(255,216,102,0.08);
+  border: 1px solid rgba(255,216,102,0.25);
+  border-radius: 12px;
+  padding: 16px;
+}
+.result h2 {
+  font-size: 1rem;
+  color: #ffd866;
+  margin-bottom: 12px;
+}
+.result-empty {
+  color: #667;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 20px 0;
+}
+.ingredient-list { list-style: none; }
+.ingredient-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.ingredient-item:last-child { border-bottom: none; }
+.ingredient-name { font-size: 0.95rem; }
+.ingredient-count {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #ffd866;
+  min-width: 40px;
+  text-align: right;
+}
+.btn-reset {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin-top: 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.08);
+  color: #8899cc;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-reset:hover { background: rgba(255,255,255,0.15); }
+</style>
+</head>
+<body>
+<h1>ポケモンスリープ 料理素材計算</h1>
+
+<div class="category-section">
+  <div class="category-label">カテゴリ</div>
+  <select id="category" onchange="onCategoryChange()">
+    <option value="">-- カテゴリを選択 --</option>
+    <option value="カレー・シチュー">カレー・シチュー</option>
+    <option value="サラダ">サラダ</option>
+    <option value="デザート・ドリンク">デザート・ドリンク</option>
+  </select>
+
+  <div class="meals" id="meals"></div>
+</div>
+
+<div class="result">
+  <h2>必要素材一覧</h2>
+  <div id="result-content" class="result-empty">料理を選択してください</div>
+</div>
+
+<button class="btn-reset" onclick="resetAll()">リセット</button>
+
+<script src="data.js"></script>
+<script>
+const state = { category: '', meals: [null, null, null] };
+
+function init() {
+  // リストページから戻ってきた場合、localStorageから復元
+  const saved = localStorage.getItem('pokesleep');
+  if (saved) {
+    const data = JSON.parse(saved);
+    state.category = data.category || '';
+    state.meals = data.meals || [null, null, null];
+    document.getElementById('category').value = state.category;
+  }
+  renderMeals();
+  calculate();
+}
+
+function onCategoryChange() {
+  const cat = document.getElementById('category').value;
+  if (cat !== state.category) {
+    state.category = cat;
+    state.meals = [null, null, null];
+  }
+  saveState();
+  renderMeals();
+  calculate();
+}
+
+function renderMeals() {
+  const container = document.getElementById('meals');
+  container.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const meal = state.meals[i];
+    const r = meal ? findRecipe(state.category, meal) : null;
+    const slot = document.createElement('div');
+    slot.className = 'meal-slot';
+    slot.innerHTML = `
+      <div class="meal-header"><span class="num">${i+1}</span> ${i+1}食目</div>
+      <div class="meal-name ${r ? '' : 'empty'}">${r ? r.name : '-- タップして料理を選択 --'}</div>
+      <div class="selected-recipe">${r ? Object.entries(r.ingredients).map(([k,v])=>`${k} x${v}`).join('、') : ''}</div>
+      <div class="meal-link">${state.category ? '料理リストから選ぶ >' : ''}</div>
+    `;
+    slot.onclick = () => openList(i);
+    container.appendChild(slot);
+  }
+}
+
+function findRecipe(cat, name) {
+  if (!cat || !recipes[cat]) return null;
+  return recipes[cat].find(r => r.name === name) || null;
+}
+
+function openList(slotIndex) {
+  if (!state.category) return;
+  saveState();
+  location.href = `list.html?slot=${slotIndex}`;
+}
+
+function calculate() {
+  const totals = {};
+  let count = 0;
+  for (let i = 0; i < 3; i++) {
+    const r = state.meals[i] ? findRecipe(state.category, state.meals[i]) : null;
+    if (r) {
+      count++;
+      for (const [ing, qty] of Object.entries(r.ingredients)) {
+        totals[ing] = (totals[ing] || 0) + qty;
+      }
+    }
+  }
+  const content = document.getElementById('result-content');
+  if (count === 0) {
+    content.className = 'result-empty';
+    content.innerHTML = '料理を選択してください';
+    return;
+  }
+  content.className = '';
+  const sorted = Object.entries(totals).sort((a,b) => b[1] - a[1]);
+  content.innerHTML = `<ul class="ingredient-list">${
+    sorted.map(([name, qty]) =>
+      `<li class="ingredient-item"><span class="ingredient-name">${name}</span><span class="ingredient-count">x${qty}</span></li>`
+    ).join('')
+  }</ul>`;
+}
+
+function saveState() {
+  localStorage.setItem('pokesleep', JSON.stringify(state));
+}
+
+function resetAll() {
+  state.category = '';
+  state.meals = [null, null, null];
+  document.getElementById('category').value = '';
+  saveState();
+  renderMeals();
+  calculate();
+}
+
+init();
+</script>
+</body>
+</html>

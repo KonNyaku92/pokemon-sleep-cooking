@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>料理リスト - ポケモンスリープ</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+  background: linear-gradient(135deg, #0f1b3d 0%, #1a2a5e 50%, #0d1a3a 100%);
+  color: #e0e8ff;
+  min-height: 100vh;
+  padding: 16px;
+  padding-bottom: 80px;
+}
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.btn-back {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  color: #8899cc;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-back:hover { background: rgba(255,255,255,0.18); }
+.header-title {
+  font-size: 1.1rem;
+  color: #ffd866;
+  flex: 1;
+}
+.slot-badge {
+  background: #ffd866;
+  color: #0f1b3d;
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+.sort-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.sort-btn {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.08);
+  color: #8899cc;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+}
+.sort-btn.active {
+  background: rgba(255,216,102,0.15);
+  border-color: #ffd866;
+  color: #ffd866;
+}
+.recipe-list { list-style: none; }
+.recipe-item {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.recipe-item:active {
+  background: rgba(255,216,102,0.12);
+  border-color: #ffd866;
+}
+.recipe-item.selected {
+  background: rgba(255,216,102,0.1);
+  border-color: rgba(255,216,102,0.4);
+}
+.recipe-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.recipe-no {
+  font-size: 0.75rem;
+  color: #6680bb;
+  margin-right: 8px;
+}
+.recipe-name {
+  font-size: 0.95rem;
+  flex: 1;
+}
+.recipe-energy {
+  font-size: 0.85rem;
+  color: #ffd866;
+  white-space: nowrap;
+  margin-left: 8px;
+}
+.recipe-ingredients {
+  font-size: 0.8rem;
+  color: #8899cc;
+  margin-top: 4px;
+}
+.selected-label {
+  display: inline-block;
+  background: #ffd866;
+  color: #0f1b3d;
+  font-size: 0.7rem;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <button class="btn-back" onclick="goBack()">< 戻る</button>
+  <div class="header-title" id="header-title">料理リスト</div>
+  <span class="slot-badge" id="slot-badge"></span>
+</div>
+
+<div class="sort-bar">
+  <button class="sort-btn active" id="sort-no" onclick="sortBy('no')">No. 順</button>
+  <button class="sort-btn" id="sort-energy" onclick="sortBy('energy')">エナジー順</button>
+</div>
+
+<ul class="recipe-list" id="recipe-list"></ul>
+
+<script src="data.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const slotIndex = parseInt(params.get('slot') || '0', 10);
+const saved = JSON.parse(localStorage.getItem('pokesleep') || '{}');
+const category = saved.category || '';
+const meals = saved.meals || [null, null, null];
+let currentSort = 'no';
+
+document.getElementById('header-title').textContent = category || '料理リスト';
+document.getElementById('slot-badge').textContent = `${slotIndex + 1}食目`;
+
+function getRecipes() {
+  if (!category || !recipes[category]) return [];
+  return [...recipes[category]];
+}
+
+function sortBy(key) {
+  currentSort = key;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`sort-${key}`).classList.add('active');
+  render();
+}
+
+function render() {
+  const list = getRecipes();
+  if (currentSort === 'energy') {
+    list.sort((a, b) => b.energy - a.energy);
+  } else {
+    list.sort((a, b) => a.no - b.no);
+  }
+  const container = document.getElementById('recipe-list');
+  container.innerHTML = list.map(r => {
+    const isSelected = meals.includes(r.name);
+    const ingText = Object.entries(r.ingredients).map(([k,v]) => `${k} x${v}`).join('、');
+    return `
+      <li class="recipe-item ${isSelected ? 'selected' : ''}" onclick="selectRecipe('${r.name.replace(/'/g, "\\'")}')">
+        <div class="recipe-top">
+          <span class="recipe-no">No.${String(r.no).padStart(2,'0')}</span>
+          <span class="recipe-name">${r.name}${isSelected ? '<span class="selected-label">選択中</span>' : ''}</span>
+          <span class="recipe-energy">${r.energy.toLocaleString()}</span>
+        </div>
+        <div class="recipe-ingredients">${ingText}</div>
+      </li>
+    `;
+  }).join('');
+}
+
+function selectRecipe(name) {
+  meals[slotIndex] = name;
+  saved.meals = meals;
+  localStorage.setItem('pokesleep', JSON.stringify(saved));
+  location.href = 'index.html';
+}
+
+function goBack() {
+  location.href = 'index.html';
+}
+
+render();
+</script>
+</body>
+</html>
